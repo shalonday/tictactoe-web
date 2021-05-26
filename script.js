@@ -14,16 +14,24 @@ Update scores and display a message.
 // functions despite JS not having a "private" keyword.
 const playerFactory = (name, symbol) => {
   let _score = 0; // it is common in JS to prefix private properties with "_"
-  const getScore = () => _score;  
+  const _name = name;
+  const getScore = () => _score;
+  const getName = () => _name;  
   const play = () => {
     console.log(`${name}'s turn`);
-    DisplayController.addOnClickToBoard(Gameboard.board, symbol);
+    GameController.setCurrentPlayer(name); // 'this' gets assigned to window, so use name instead.
+    GameController.addOnClickToBoard(Gameboard.board, symbol);
+  }
+
+  const winARound = () => {
+    _score++;
+    return `${name} wins this round!`;
   }
   // closures: I can use closures for updating the score perhaps since closures have to do with 
   // private vars and functions. So play will be accessible outside and it updates score, 
   // but score itself won't be directly accessible outside.
 
-  return {getScore, play};
+  return {getScore, getName, play, winARound};
 }
 
 // Module for the Gameboard. Module pattern is similar to the factory, but 
@@ -32,14 +40,9 @@ const playerFactory = (name, symbol) => {
 // available.
 const Gameboard = (() => {
   'use strict'; // which does what?
-
-  // either I create the array of 9 divs here or I bind this object to pre
-  // -made divs in index.html if that's possible?
+  
+  // bind this object to pre-made divs in index.html
   let board = document.getElementsByClassName('cell');
-                        
-  const displayBoard = () => {
-    // display the board on the screen... how tho? probs some css magick.
-  }
 
   return {board};
 })();
@@ -49,9 +52,18 @@ const Gameboard = (() => {
 //   let startGame
 // })();
 
-// the clue had a "DisplayController" module 
-const DisplayController = (() => {
+// the clue had a "Controller" module 
+const GameController = (() => {
   'use strict'; // "good practice": https://coryrylan.com/blog/javascript-module-pattern-basics
+  let currentPlayer = null; 
+
+  const setCurrentPlayer = (playerName) => {
+    if (playerName == player1.getName()){
+      currentPlayer = player1;
+    } else {
+      currentPlayer = player2;
+    }
+  }
 
   const addOnClickToBoard = (board, symbol) => {
     const controller = new AbortController(); // to allow onClick event listener to be "abortable"
@@ -62,13 +74,12 @@ const DisplayController = (() => {
       if (anchor.textContent == ""){
         anchor.addEventListener('click', (e) => {
           addSymbol(e.target, symbol, controller); // used an enclosed (private) function here. YAS.
-          changePlayer(symbol);
-          checkWinState();
+          checkWinState(currentPlayer);
+          changePlayer(currentPlayer);          
         }, { signal: controller.signal });
       }
     }
-  } // at its current state, the event listeners pile up. change such that every addonclick removes
-    // the previous onClick listener.
+  } 
 
   const addSymbol = (cell, symbol, controller) => {
     if (cell.textContent == ""){
@@ -79,49 +90,59 @@ const DisplayController = (() => {
     }
   }
 
-  const changePlayer = (symbol) => {
-    if (symbol == "O"){
+  const changePlayer = (currentPlayer) => {
+    if (currentPlayer == player1){
       player2.play();
-    } else if (symbol == "X") {
+    } else if (currentPlayer == player2) {
       player1.play();
     }
   }
 
-  const checkWinState = () => {
+  const checkWinState = (player) => {
     const b = Gameboard.board;
     // check board contents in if else blocks, with a "main" cell in each block which will be the
     // only one we will check for != null, for simplicity purposes.
-    if (b[0].textContent != null){ // [0] is the "main" here.
-      if ((b[0] == b[1] && b[1] == b[2]) ||
-          (b[0] == b[4] && b[4] == b[8]) ||
-          (b[0] == b[3] && b[3] == b[6])){
-            // end game and display winner
-          }
+    if (b[0].textContent != ""){ // [0] is the "main" here.
+      console.log("entered branch [0] shallow");
+      if ((b[0].textContent == b[1].textContent && b[1].textContent == b[2].textContent) ||
+          (b[0].textContent == b[4].textContent && b[4].textContent == b[8].textContent) ||
+          (b[0].textContent == b[3].textContent && b[3].textContent == b[6].textContent)){
+            // end round and display winner
+            console.log("entered branch [0] deep");
+            console.log(player.winARound());
+            clearBoard();
+      }
     } 
     
-    if (b[3].textContent != null){ // [3] is the main one for this branch
-      if (b[3] == b[4] && b[4] == b[5]){
-            // end game and display winner
-          }
+    if (b[3].textContent != ""){ // [3] is the main one for this branch
+      console.log("entered branch [3] shallow");
+      if (b[3].textContent == b[4].textContent && b[4].textContent == b[5].textContent){
+        console.log("entered branch [3] deep");
+        console.log(player.winARound());
+        clearBoard();
+      }
     }
 
-    if (b[6].textContent != null){ // [6] is the "main" here.
-      if ((b[2] == b[4] && b[4] == b[6]) ||
-          (b[6] == b[7] && b[7] == b[8])){
-            // end game and display winner
-          }
+    if (b[6].textContent != ""){ // [6] is the "main" here.
+      if ((b[2].textContent == b[4].textContent && b[4].textContent == b[6].textContent) ||
+          (b[6].textContent == b[7].textContent && b[7].textContent == b[8].textContent)){
+        console.log(player.winARound());
+        clearBoard();
+      }
     } 
 
-    if (b[1].textContent != null){ 
-      if (b[1] == b[4] && b[4] == b[7]){
-            // end game and display winner
-          }
+    if (b[1].textContent != ""){ 
+      if (b[1].textContent == b[4].textContent && b[4].textContent == b[7].textContent){
+        console.log(player.winARound());
+        clearBoard();
+      }
     }
 
-    if (b[2].textContent != null){ 
-      if (b[2] == b[5] && b[5] == b[8]){
-            // end game and display winner
-          }
+    if (b[2].textContent != ""){ 
+      if (b[2].textContent == b[5].textContent && b[5].textContent == b[8].textContent){
+        console.log(player.winARound());
+        clearBoard();
+      }
     }
 
     // check if there are no more boxes left to fill
@@ -131,12 +152,20 @@ const DisplayController = (() => {
       }
       if (i == 8){
         // end game and display tie message
+        console.log("It's a tie!");
+        clearBoard();
       }
     }
   }
 
+  const clearBoard = () => {
+    const b = Gameboard.board;
+    for(var i = 0; i < b.length; i++) {
+      b[i].textContent = "";
+    }
+  }
   
-  return {addOnClickToBoard};
+  return {addOnClickToBoard, setCurrentPlayer};
 })();
 
 const player1 = playerFactory('Pio', 'O');
